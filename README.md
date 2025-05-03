@@ -67,7 +67,7 @@ Ensure you have the following installed:
    ```
 
 3. **Batch Evaluation**:
-   Run the AI agent directly using:
+   Run the AI agent evaluation on benchmark prompts directly using:
    ```bash
    python .\batch_evals.py
    ```
