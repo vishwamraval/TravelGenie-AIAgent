@@ -1,0 +1,826 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TravelGenie - AI-Powered Travel Planner</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .video-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            filter: brightness(0.6);
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: -1;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 1rem;
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 400px;
+            height: 100%;
+            overflow-y: auto;
+            padding: 2rem;
+            z-index: 10;
+        }
+        .form-input, .form-select {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+            padding-left: 3rem;
+            padding-right: 1rem;
+            font-size: 1rem;
+            height: 3rem;
+            line-height: 3rem;
+            border-radius: 0.75rem;
+        }
+        .form-input:focus, .form-select:focus {
+            background: rgba(255, 255, 255, 1);
+            border-color: #10b981;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+            transform: scale(1.02);
+        }
+        .form-textarea {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem 0.5rem 3rem;
+            font-size: 1rem;
+            height: 3rem;
+            line-height: 2rem;
+            border-radius: 0.75rem;
+            resize: none;
+        }
+        .form-textarea:focus {
+            background: rgba(255, 255, 255, 1);
+            border-color: #10b981;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+        .input-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #10b981;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+        .form-input:focus + .input-icon, .form-select:focus + .input-icon, .form-textarea:focus + .input-icon {
+            transform: translateY(-50%) scale(1.1);
+            color: #059669;
+        }
+        .form-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .section-header {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #10b981;
+            margin: 1.5rem 0 0.75rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #2563eb, #059669);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5);
+            animation: none;
+        }
+        .btn-primary.small {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .granting-wish {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            color: #10b981;
+            font-size: 1.2rem;
+            text-align: center;
+            font-weight: 600;
+            opacity: 0;
+        }
+        .chat-container {
+            max-width: 6xl;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages {
+            max-height: 900px;
+            min-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            flex-grow: 1;
+        }
+        .chat-message {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            color: #ffffff;
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+        .chat-message.user {
+            background: rgba(59, 130, 246, 0.15);
+        }
+        .chat-message.assistant {
+            background: rgba(16, 185, 129, 0.15);
+        }
+        .chat-message h2 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #3b82f6;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.8), rgba(16, 185, 129, 0.8));
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .chat-message h2:hover {
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.9), rgba(5, 150, 105, 0.9));
+        }
+        .chat-message p, .chat-message ul, .chat-message ol {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin: 0.5rem 0;
+        }
+        .chat-message strong {
+            color: #10b981;
+        }
+        .itinerary-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .itinerary-card:hover {
+            transform: translateY(-3px);
+        }
+        .day-content {
+            padding: 1rem;
+            display: none;
+        }
+        .day-content.active {
+            display: block;
+        }
+        .destination-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            transition: transform 0.3s ease;
+        }
+        .destination-card:hover {
+            transform: scale(1.05);
+        }
+        .destination-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            filter: brightness(0.8);
+            transition: filter 0.3s ease;
+        }
+        .destination-card:hover .destination-img {
+            filter: brightness(1);
+        }
+        .destination-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+            padding: 0.75rem;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .destination-overlay h3 {
+            font-size: 1rem;
+        }
+        .destination-overlay p {
+            font-size: 0.75rem;
+        }
+        .chat-input {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 1rem;
+            padding: 1rem 1.5rem;
+            font-size: 1.25rem;
+            width: 100%;
+            color: #1f2937;
+            transition: all 0.3s ease;
+        }
+        .chat-input:focus {
+            background: rgba(255, 255, 255, 1);
+            border-color: #10b981;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 1.5rem;
+            }
+            .main-content {
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+            }
+            .form-input, .form-select {
+                padding-left: 2.5rem;
+                font-size: 0.9rem;
+                height: 2.5rem;
+                line-height: 2.5rem;
+            }
+            .form-textarea {
+                padding-left: 2.5rem;
+                font-size: 0.9rem;
+                height: 2.5rem;
+                line-height: 1.5rem;
+            }
+            .input-icon {
+                left: 0.5rem;
+                font-size: 1rem;
+            }
+            .form-label {
+                font-size: 0.9rem;
+            }
+            .section-header {
+                font-size: 1.1rem;
+            }
+            .btn-primary {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+            }
+            .btn-primary.small {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+            }
+            .destination-img {
+                height: 120px;
+            }
+            .destination-overlay h3 {
+                font-size: 0.875rem;
+            }
+            .destination-overlay p {
+                font-size: 0.625rem;
+            }
+            .chat-container {
+                padding: 1.5rem;
+            }
+            .chat-messages {
+                max-height: 600px;
+                min-height: 400px;
+            }
+            .chat-message h2 {
+                font-size: 1.5rem;
+            }
+            .chat-message p, .chat-message ul, .chat-message ol {
+                font-size: 1rem;
+            }
+            .chat-input {
+                font-size: 1rem;
+                padding: 0.75rem 1rem;
+                border-radius: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Video Background -->
+    <video autoplay muted loop class="video-bg">
+        <source src="/static/assets/travel-bg.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <div class="overlay"></div>
+
+    <!-- Sidebar Form -->
+    <div class="sidebar glass-card">
+        <form action="/generate" method="POST" id="travel-form">
+            <h2 class="text-2xl font-bold text-white mb-4">TravelGenie AI</h2>
+            
+            <h3 class="section-header">Trip Details</h3>
+            <div class="mb-4">
+                <label for="country" class="block form-label mb-1">Country</label>
+                <div class="relative">
+                    <i class="fas fa-globe input-icon"></i>
+                    <input type="text" id="country" name="country" class="form-input w-full" placeholder="e.g., France">
+                </div>
+                <span id="country-error" class="text-red-400 text-sm hidden mt-1">Please enter a country.</span>
+            </div>
+            <div class="mb-4">
+                <label for="start_city" class="block form-label mb-1">Start City</label>
+                <div class="relative">
+                    <i class="fas fa-map-marker-alt input-icon"></i>
+                    <input type="text" id="start_city" name="start_city" class="form-input w-full" placeholder="e.g., Paris">
+                </div>
+                <span id="start_city-error" class="text-red-400 text-sm hidden mt-1">Please enter a start city.</span>
+            </div>
+            <div class="mb-4">
+                <label for="destinations" class="block form-label mb-1">Destinations</label>
+                <div class="relative">
+                    <i class="fas fa-map-marked-alt input-icon"></i>
+                    <input type="text" id="destinations" name="destinations" class="form-input w-full" placeholder="e.g., Lyon, Nice">
+                </div>
+                <span id="destinations-error" class="text-red-400 text-sm hidden mt-1">Please enter destination(s).</span>
+            </div>
+            <div class="mb-4">
+                <label for="budget_in_usd" class="block form-label mb-1">Budget (USD)</label>
+                <div class="relative">
+                    <i class="fas fa-dollar-sign input-icon"></i>
+                    <input type="number" id="budget_in_usd" name="budget_in_usd" class="form-input w-full" placeholder="e.g., 2000">
+                </div>
+                <span id="budget_in_usd-error" class="text-red-400 text-sm hidden mt-1">Please enter a valid budget.</span>
+            </div>
+            <div class="mb-4">
+                <label for="from_date" class="block form-label mb-1">Start Date</label>
+                <div class="relative">
+                    <i class="fas fa-calendar-alt input-icon"></i>
+                    <input type="date" id="from_date" name="from_date" class="form-input w-full">
+                </div>
+                <span id="from_date-error" class="text-red-400 text-sm hidden mt-1">Please select a start date.</span>
+            </div>
+            <div class="mb-4">
+                <label for="to_date" class="block form-label mb-1">End Date</label>
+                <div class="relative">
+                    <i class="fas fa-calendar-alt input-icon"></i>
+                    <input type="date" id="to_date" name="to_date" class="form-input w-full">
+                </div>
+                <span id="to_date-error" class="text-red-400 text-sm hidden mt-1">Please select an end date.</span>
+                <span id="date-error" class="text-red-400 text-sm hidden mt-1">End date must be after start date.</span>
+            </div>
+
+            <h3 class="section-header">Traveler Info</h3>
+            <div class="mb-4">
+                <label for="num_cities" class="block form-label mb-1">Number of Cities</label>
+                <div class="relative">
+                    <i class="fas fa-city input-icon"></i>
+                    <select id="num_cities" name="num_cities" class="form-select w-full">
+                        <option value="" disabled selected>Select number of cities</option>
+                        <option value="1 to 2">1 to 2 Cities</option>
+                        <option value="3 to 5">3 to 5 Cities</option>
+                        <option value="6 to 10">6 to 10 Cities</option>
+                    </select>
+                </div>
+                <span id="num_cities-error" class="text-red-400 text-sm hidden mt-1">Please select number of cities.</span>
+            </div>
+            <div class="mb-4">
+                <label for="adult_travelers" class="block form-label mb-1">Adult Travelers</label>
+                <div class="relative">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="number" id="adult_travelers" name="adult_travelers" min="1" class="form-input w-full" placeholder="e.g., 2">
+                </div>
+                <span id="adult_travelers-error" class="text-red-400 text-sm hidden mt-1">Please enter a valid number of adults.</span>
+            </div>
+            <div class="mb-4">
+                <label for="child_travelers" class="block form-label mb-1">Child Travelers</label>
+                <div class="relative">
+                    <i class="fas fa-child input-icon"></i>
+                    <input type="number" id="child_travelers" name="child_travelers" min="0" class="form-input w-full" placeholder="e.g., 0">
+                </div>
+                <span id="child_travelers-error" class="text-red-400 text-sm hidden mt-1">Please enter a valid number of children.</span>
+            </div>
+
+            <h3 class="section-header">Preferences</h3>
+            <div class="mb-4">
+                <label for="interests" class="block form-label mb-1">Interest</label>
+                <div class="relative">
+                    <i class="fas fa-star input-icon"></i>
+                    <select id="interests" name="interests" class="form-select w-full">
+                        <option value="" disabled selected>Select an interest</option>
+                        <option value="Museums">Museums</option>
+                        <option value="Food">Food</option>
+                        <option value="Culture">Culture</option>
+                        <option value="Adventure">Adventure</option>
+                        <option value="Relaxation">Relaxation</option>
+                        <option value="Business">Business</option>
+                        <option value="Nature">Nature</option>
+                    </select>
+                </div>
+                <span id="interests-error" class="text-red-400 text-sm hidden mt-1">Please select an interest.</span>
+            </div>
+            <div class="mb-4">
+                <label for="user_pref" class="block form-label mb-1">Preferences (max 50 chars)</label>
+                <div class="relative">
+                    <i class="fas fa-heart input-icon"></i>
+                    <input type="text" id="user_pref" name="user_pref" maxlength="50" class="form-input w-full" placeholder="e.g., Historical sites">
+                </div>
+                <span id="user_pref-error" class="text-red-400 text-sm hidden mt-1">Please enter a preference (max 50 characters).</span>
+            </div>
+            <div class="mb-4 max-w-sm mx-auto">
+                <label for="special_requests" class="block form-label mb-1 text-center">Special Requests</label>
+                <div class="relative">
+                    <i class="fas fa-comment-alt input-icon"></i>
+                    <textarea id="special_requests" name="special_requests" class="form-textarea w-full" placeholder="e.g., Vegetarian meals"></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary w-full text-white font-semibold flex items-center justify-center">
+                <i class="fas fa-plane-departure mr-2"></i> Generate Itinerary
+            </button>
+        </form>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" style="margin-left: 400px; padding-left: 1rem;">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-extrabold text-white drop-shadow-2xl">TravelGenie</h1>
+            <p class="text-xl text-white mt-3 opacity-90 animate-pulse">Plan Your Dream Journey with AI Magic</p>
+        </div>
+
+        <!-- Top Destinations -->
+        <div class="mb-12">
+            <h2 class="section-header text-center">Explore Popular Destinations</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-w-5xl mx-auto">
+                <div class="destination-card">
+                    <img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a" alt="Paris" class="destination-img">
+                    <div class="destination-overlay">
+                        <h3 class="text-base font-semibold">Paris, France</h3>
+                        <p class="text-xs">City of Love</p>
+                    </div>
+                </div>
+                <div class="destination-card">
+                    <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e" alt="Bali" class="destination-img">
+                    <div class="destination-overlay">
+                        <h3 class="text-base font-semibold">Bali, Indonesia</h3>
+                        <p class="text-xs">Island Paradise</p>
+                    </div>
+                </div>
+                <div class="destination-card">
+                    <img src="https://images.unsplash.com/photo-1533929736458-ca588d08c8be" alt="New York" class="destination-img">
+                    <div class="destination-overlay">
+                        <h3 class="text-base font-semibold">New York, USA</h3>
+                        <p class="text-xs">The Big Apple</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div id="chat-container" class="chat-container glass-card rounded-2xl">
+            <h2 class="text-3xl font-bold text-white flex items-center mb-6">
+                <i class="fas fa-comments mr-3"></i> Chat with TravelGenie AI
+            </h2>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="mt-4 flex items-center">
+                <input type="text" id="chat-input" class="chat-input flex-grow mr-3" placeholder="Ask about your travel plans...">
+                <button id="chat-submit" class="btn-primary small text-white font-semibold flex items-center justify-center">
+                    <i class="fas fa-paper-plane mr-1"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // GSAP Animations
+        gsap.from("header", { duration: 1, y: -100, opacity: 0, ease: "power3.out" });
+        gsap.from(".glass-card", { duration: 1, scale: 0.9, opacity: 0, delay: 0.3, ease: "back.out(1.7)", stagger: 0.2 });
+        gsap.from(".destination-card", { duration: 1, y: 50, opacity: 0, delay: 0.5, stagger: 0.2, ease: "power3.out" });
+
+        // Chat History
+        let chatHistory = [];
+
+        // Form Submission
+        const form = document.getElementById('travel-form');
+        const chatContainer = document.getElementById('chat-container');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSubmit = document.getElementById('chat-submit');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resetErrors();
+
+            // Validation
+            let hasError = false;
+            const country = document.getElementById('country').value.trim();
+            const start_city = document.getElementById('start_city').value.trim();
+            const destinations = document.getElementById('destinations').value.trim();
+            const budget_in_usd = document.getElementById('budget_in_usd').value;
+            const from_date = document.getElementById('from_date').value;
+            const to_date = document.getElementById('to_date').value;
+            const interests = document.getElementById('interests').value;
+            const num_cities = document.getElementById('num_cities').value;
+            const adult_travelers = document.getElementById('adult_travelers').value;
+            const child_travelers = document.getElementById('child_travelers').value;
+            const user_pref = document.getElementById('user_pref').value.trim();
+            const special_requests = document.getElementById('special_requests').value.trim();
+
+            if (!country) {
+                showError('country-error');
+                hasError = true;
+            }
+            if (!start_city) {
+                showError('start_city-error');
+                hasError = true;
+            }
+            if (!destinations) {
+                showError('destinations-error');
+                hasError = true;
+            }
+            if (!budget_in_usd || budget_in_usd <= 0) {
+                showError('budget_in_usd-error', 'Please enter a valid budget.');
+                hasError = true;
+            }
+            if (!from_date) {
+                showError('from_date-error');
+                hasError = true;
+            }
+            if (!to_date) {
+                showError('to_date-error');
+                hasError = true;
+            }
+            if (from_date && to_date && new Date(to_date) < new Date(from_date)) {
+                showError('date-error');
+                hasError = true;
+            }
+            if (!interests) {
+                showError('interests-error');
+                hasError = true;
+            }
+            if (!num_cities) {
+                showError('num_cities-error');
+                hasError = true;
+            }
+            if (!adult_travelers || adult_travelers < 1) {
+                showError('adult_travelers-error', 'Please enter a valid number of adults.');
+                hasError = true;
+            }
+            if (!child_travelers && child_travelers !== '0') {
+                showError('child_travelers-error', 'Please enter a valid number of children.');
+                hasError = true;
+            }
+            if (!user_pref) {
+                showError('user_pref-error');
+                hasError = true;
+            }
+            if (user_pref.length > 50) {
+                showError('user_pref-error', 'Preference must be 50 characters or less.');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // Show granting wish message
+            chatMessages.innerHTML += '<div class="granting-wish">Granting your wish...</div>';
+            gsap.to('.granting-wish', { opacity: 1, duration: 0.5 });
+            chatContainer.classList.remove('hidden');
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await response.json();
+
+                // Update chat history
+                const userMessage = `
+                    Generate a travel plan with the following details:
+                    - Country: ${country}
+                    - Start city: ${start_city}
+                    - Destination(s): ${destinations}
+                    - Travel dates: ${from_date} to ${to_date}
+                    - Interest: ${interests}
+                    - Number of cities: ${num_cities}
+                    - Travelers: ${adult_travelers} adult(s), ${child_travelers} kid(s)
+                    - Budget: $${budget_in_usd}
+                    - Preferences: ${user_pref}
+                    - Special requests: ${special_requests || 'None'}
+                `;
+                chatHistory.push({ role: 'user', content: userMessage });
+                chatHistory.push({ role: 'assistant', content: data.itinerary });
+
+                // Render chat messages
+                renderChatMessages();
+
+                // Show chat
+                gsap.fromTo(chatContainer, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out" });
+            } catch (error) {
+                console.error('Error:', error);
+                chatMessages.innerHTML += '<div class="chat-message assistant"><p class="text-red-400">An error occurred while generating the itinerary. Please try again.</p></div>';
+                chatContainer.classList.remove('hidden');
+                gsap.fromTo(chatContainer, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 1, ease: "power3.out" });
+            }
+        });
+
+        // Chat Submission
+        chatSubmit.addEventListener('click', async () => {
+            const prompt = chatInput.value.trim();
+            if (!prompt) return;
+
+            // Add user message
+            chatHistory.push({ role: 'user', content: prompt });
+            renderChatMessages();
+            chatInput.value = '';
+
+            // Show granting wish message
+            chatMessages.innerHTML += '<div class="granting-wish">Granting your wish...</div>';
+            gsap.to('.granting-wish', { opacity: 1, duration: 0.5 });
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt }),
+                });
+                const data = await response.json();
+
+                // Add assistant response
+                chatHistory.push({ role: 'assistant', content: data.response });
+                renderChatMessages();
+            } catch (error) {
+                console.error('Error:', error);
+                chatHistory.push({ role: 'assistant', content: '❌ Error: ' + error.message });
+                renderChatMessages();
+            }
+        });
+
+        function renderChatMessages() {
+            chatMessages.innerHTML = '';
+            let dayCount = 0;
+            chatHistory.forEach(msg => {
+                const isUser = msg.role === 'user';
+                let contentHtml = msg.content;
+
+                if (!isUser) {
+                    // Parse markdown and wrap days in collapsible cards
+                    const itineraryHtml = marked.parse(msg.content);
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(itineraryHtml, 'text/html');
+                    const sections = doc.body.childNodes;
+                    let output = '';
+                    let currentCard = null;
+                    let dayContent = [];
+
+                    sections.forEach(node => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.tagName === 'H2' && node.textContent.includes('Day')) {
+                                if (currentCard) {
+                                    output += `
+                                        <div class="itinerary-card glass-card" data-day="${dayCount}">
+                                            <h2 class="toggle-btn">${currentCard}<i class="fas fa-chevron-down ml-2"></i></h2>
+                                            <div class="day-content">${dayContent.join('')}</div>
+                                        </div>
+                                    `;
+                                    dayContent = [];
+                                }
+                                dayCount++;
+                                currentCard = node.textContent;
+                            } else {
+                                dayContent.push(node.outerHTML || node.textContent);
+                            }
+                        }
+                    });
+                    if (currentCard) {
+                        output += `
+                            <div class="itinerary-card glass-card" data-day="${dayCount}">
+                                <h2 class="toggle-btn">${currentCard}<i class="fas fa-chevron-down ml-2"></i></h2>
+                                <div class="day-content">${dayContent.join('')}</div>
+                            </div>
+                        `;
+                    }
+                    contentHtml = output || itineraryHtml;
+
+                    // Add download button
+                    contentHtml += `
+                        <button class="btn-primary download-btn text-white px-4 py-2 rounded-lg flex items-center mt-4">
+                            <i class="fas fa-download mr-2"></i> Download Itinerary
+                        </button>
+                    `;
+                }
+
+                chatMessages.innerHTML += `
+                    <div class="chat-message ${isUser ? 'user' : 'assistant'}">
+                        <div class="flex items-center mb-2">
+                            <i class="fas ${isUser ? 'fa-user' : 'fa-robot'} mr-2 text-2xl"></i>
+                            <span class="font-semibold">${isUser ? 'You' : 'TravelGenie'}</span>
+                        </div>
+                        ${contentHtml}
+                    </div>
+                `;
+            });
+
+            // Add click event listeners for collapsible cards
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.itinerary-card');
+                    const content = card.querySelector('.day-content');
+                    const icon = btn.querySelector('i');
+                    const isActive = content.classList.contains('active');
+
+                    if (isActive) {
+                        gsap.to(content, { height: 0, opacity: 0, duration: 0.3, onComplete: () => {
+                            content.classList.remove('active');
+                            content.style.display = 'none';
+                        }});
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    } else {
+                        content.style.display = 'block';
+                        content.classList.add('active');
+                        gsap.fromTo(content, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: 0.3 });
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    }
+                });
+            });
+
+            // Add download button listeners
+            document.querySelectorAll('.download-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.chat-message');
+                    const text = card.querySelector('.itinerary-card')?.textContent || card.textContent;
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'TravelGenie_Itinerary.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            });
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showError(id, message = null) {
+            const errorEl = document.getElementById(id);
+            if (message) errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+
+        function resetErrors() {
+            document.querySelectorAll('.text-red-400').forEach(el => {
+                el.classList.add('hidden');
+                if (el.id === 'budget_in_usd-error') el.textContent = 'Please enter a valid budget.';
+                if (el.id === 'adult_travelers-error') el.textContent = 'Please enter a valid number of adults.';
+                if (el.id === 'child_travelers-error') el.textContent = 'Please enter a valid number of children.';
+                if (el.id === 'user_pref-error') el.textContent = 'Please enter a preference (max 50 characters).';
+            });
+        }
+    </script>
+</body>
+</html>
